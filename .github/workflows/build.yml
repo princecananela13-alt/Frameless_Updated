@@ -1,0 +1,39 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Extract source
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+          ZIP=$(find . -maxdepth 1 -name '*.zip' | head -1)
+          test -n "$ZIP" || (echo "Source ZIP missing" && exit 1)
+          mkdir source
+          unzip -o "$ZIP" -d source
+
+      - name: Build APK
+        run: |
+          GRADLEW=$(find source -type f -name gradlew | head -1)
+          test -n "$GRADLEW" || (echo "gradlew missing from ZIP" && exit 1)
+          chmod +x "$GRADLEW"
+          cd "$(dirname "$GRADLEW")"
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Frameless-AI-APK
+          path: source/**/*.apk
